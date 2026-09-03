@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import { getChildPages, getCurrentSite, getHubPage, getSingletonPage } from "@/lib/data";
+
+const displayFont = Poppins({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getCurrentSite();
@@ -45,7 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       : [];
 
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className={`h-full ${displayFont.variable}`}>
       <body className="min-h-full flex flex-col font-sans bg-white text-slate-900">
         <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
           <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
@@ -77,9 +85,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               )}
               <Link
                 href="/contact"
-                className="inline-block rounded-md bg-slate-900 text-white text-sm font-medium px-4 py-2 hover:bg-slate-800 whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-ink)] text-white text-xs font-semibold uppercase tracking-wide px-4 py-2.5 hover:bg-black whitespace-nowrap"
               >
-                Get a Free Estimate
+                Get a Free Estimate <span aria-hidden="true">&rarr;</span>
               </Link>
             </div>
           </nav>

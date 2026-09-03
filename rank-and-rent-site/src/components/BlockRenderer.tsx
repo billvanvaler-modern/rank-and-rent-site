@@ -93,17 +93,57 @@ const paragraphs = (text: string) =>
       </p>
     ));
 
+/**
+ * Small brand mark used above every block_type that carries a `heading`
+ * field -- a short gold rule instead of a full-bleed color band, since
+ * several blocks with headings (differentiators, service_area,
+ * pricing_table, testimonials, faq) can stack on the same page, and a full
+ * band on each would get heavy fast. Keeps the reference site's gold+bold
+ * heading language without cloning its exact section-divider copy, which
+ * doesn't exist in this schema.
+ */
+function Heading({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
+  return (
+    <div className={`mb-6 ${center ? "text-center" : ""}`}>
+      <span className={`block w-10 h-1 bg-[var(--color-brand)] mb-3 ${center ? "mx-auto" : ""}`} />
+      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">{children}</h2>
+    </div>
+  );
+}
+
 function Hero({ content, images }: { content: HeroContent; images: Record<string, PageImage> }) {
   const image = content.image_slot ? images[content.image_slot] : undefined;
+
+  if (!image) {
+    // No photo uploaded yet -- fall back to the plain two-column layout so
+    // the hero never looks broken pre-photos (see ImageBox below).
+    return (
+      <section className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">{content.headline}</h1>
+          {content.subheadline && <p className="text-xl text-slate-600 italic mb-4">{content.subheadline}</p>}
+          {content.intro && <p className="text-slate-600 max-w-xl mb-8">{content.intro}</p>}
+          {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+        </div>
+        <ImageBox image={image} alt={content.headline} className="aspect-[4/3] w-full rounded-xl" />
+      </section>
+    );
+  }
+
   return (
-    <section className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
-      <div>
-        <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">{content.headline}</h1>
-        {content.subheadline && <p className="text-xl text-slate-600 mb-4">{content.subheadline}</p>}
-        {content.intro && <p className="text-slate-600 max-w-xl mb-8">{content.intro}</p>}
-        {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+    <section
+      className="relative bg-cover bg-center"
+      style={{ backgroundImage: `url(${publicImageUrl(image.storage_path)})` }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/10" />
+      <div className="relative max-w-5xl mx-auto px-6 py-20 sm:py-28">
+        <div className="max-w-xl bg-white/70 backdrop-blur-sm rounded-xl p-6 sm:p-8">
+          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">{content.headline}</h1>
+          {content.subheadline && <p className="text-xl text-slate-700 italic mb-4">{content.subheadline}</p>}
+          {content.intro && <p className="text-slate-700 mb-8">{content.intro}</p>}
+          {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+        </div>
       </div>
-      <ImageBox image={image} alt={content.headline} className="aspect-[4/3] w-full rounded-xl" />
     </section>
   );
 }
@@ -172,31 +212,37 @@ function BodySection({ content }: { content: BodySectionContent }) {
 function PricingTable({ content }: { content: PricingTableContent }) {
   return (
     <section className={section}>
-      {content.heading && <h2 className="text-2xl font-semibold text-slate-900 mb-3">{content.heading}</h2>}
-      {content.intro && paragraphs(content.intro)}
-      {content.rows?.length > 0 && (
-        <div className="overflow-x-auto my-6">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-300">
-                <th className="py-2 pr-4 font-semibold text-slate-900">Service</th>
-                <th className="py-2 pr-4 font-semibold text-slate-900">Typical Range</th>
-              </tr>
-            </thead>
-            <tbody>
-              {content.rows.map((row, i) => (
-                <tr key={i} className="border-b border-slate-200">
-                  <td className="py-2 pr-4 text-slate-700">{row.label}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    ${row.price_low}&ndash;${row.price_high} {row.unit}
-                  </td>
+      {content.heading && <Heading>{content.heading}</Heading>}
+      <div className="grid md:grid-cols-2 gap-8 items-start">
+        {(content.intro || (content.cta_text && content.cta_url)) && (
+          <div className="bg-slate-100 rounded-lg p-6">
+            {content.intro && paragraphs(content.intro)}
+            {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+          </div>
+        )}
+        {content.rows?.length > 0 && (
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900">
+                  <th className="py-3 px-4 font-semibold text-white text-sm">Service</th>
+                  <th className="py-3 px-4 font-semibold text-white text-sm">Typical Range</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+              </thead>
+              <tbody>
+                {content.rows.map((row, i) => (
+                  <tr key={i} className={i % 2 === 1 ? "bg-slate-50" : "bg-white"}>
+                    <td className="py-2.5 px-4 text-slate-700">{row.label}</td>
+                    <td className="py-2.5 px-4 text-slate-700 tabular-nums">
+                      ${row.price_low}&ndash;${row.price_high} {row.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -205,11 +251,11 @@ function Faq({ content }: { content: FaqContent }) {
   if (!content.items?.length) return null;
   return (
     <section className={section}>
-      {content.heading && <h2 className="text-2xl font-semibold text-slate-900 mb-4">{content.heading}</h2>}
-      <div className="space-y-6">
+      {content.heading && <Heading center>{content.heading}</Heading>}
+      <div className="divide-y divide-slate-200">
         {content.items.map((item, i) => (
-          <div key={i}>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">{item.question}</h3>
+          <div key={i} className="py-5 first:pt-0">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1.5">{item.question}</h3>
             <p className="text-slate-700 leading-relaxed">{item.answer}</p>
           </div>
         ))}
@@ -220,23 +266,34 @@ function Faq({ content }: { content: FaqContent }) {
 
 function FinalCta({ content }: { content: FinalCtaContent }) {
   return (
-    <section className={`${section} text-center bg-slate-900 rounded-xl py-16 my-8 max-w-4xl`}>
-      {content.heading && <h2 className="text-2xl font-semibold text-white mb-3">{content.heading}</h2>}
-      {content.body && <p className="text-slate-300 mb-6 max-w-xl mx-auto">{content.body}</p>}
-      <CtaButton text={content.cta_text} href={content.cta_url} inverted />
+    <section className={`${section} text-center py-16`}>
+      {content.heading && <h2 className="text-3xl font-bold text-slate-900 mb-3">{content.heading}</h2>}
+      {content.body && <p className="text-slate-600 mb-6 max-w-xl mx-auto">{content.body}</p>}
+      <CtaButton text={content.cta_text} href={content.cta_url} />
     </section>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--color-brand)" aria-hidden="true">
+      <path d="M10 0l2.59 6.34L19.5 7.64l-5.02 4.6L15.9 19 10 15.27 4.1 19l1.42-6.76-5.02-4.6 6.91-1.3L10 0z" />
+    </svg>
   );
 }
 
 function Differentiators({ content }: { content: DifferentiatorsContent }) {
   return (
     <section className={section}>
-      {content.heading && <h2 className="text-2xl font-semibold text-slate-900 mb-6">{content.heading}</h2>}
-      <div className="grid sm:grid-cols-2 gap-6">
+      {content.heading && <Heading>{content.heading}</Heading>}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
         {content.items?.map((item, i) => (
           <div key={i}>
+            <div className="mb-2">
+              <StarIcon />
+            </div>
             <h3 className="font-semibold text-slate-900 mb-1">{item.heading}</h3>
-            <p className="text-slate-700">{item.body}</p>
+            <p className="text-slate-600">{item.body}</p>
           </div>
         ))}
       </div>
@@ -247,11 +304,11 @@ function Differentiators({ content }: { content: DifferentiatorsContent }) {
 function ProcessSteps({ content }: { content: ProcessStepsContent }) {
   return (
     <section className={section}>
-      {content.heading && <h2 className="text-2xl font-semibold text-slate-900 mb-6">{content.heading}</h2>}
+      {content.heading && <Heading>{content.heading}</Heading>}
       <ol className="space-y-6">
         {content.items?.map((item, i) => (
           <li key={i} className="flex gap-4">
-            <span className="flex-none w-8 h-8 rounded-full bg-slate-900 text-white text-sm font-semibold flex items-center justify-center">
+            <span className="flex-none w-8 h-8 rounded-full bg-[var(--color-ink)] text-white text-sm font-semibold flex items-center justify-center">
               {i + 1}
             </span>
             <div>
@@ -268,7 +325,7 @@ function ProcessSteps({ content }: { content: ProcessStepsContent }) {
 function ServiceArea({ content }: { content: ServiceAreaContent }) {
   return (
     <section className={section}>
-      {content.heading && <h2 className="text-2xl font-semibold text-slate-900 mb-6">{content.heading}</h2>}
+      {content.heading && <Heading center>{content.heading}</Heading>}
       <div className="grid sm:grid-cols-2 gap-6">
         {content.regions?.map((region, i) => (
           <div key={i}>
@@ -302,19 +359,20 @@ function ServicesGrid({
           const image = item.image_slot ? images[item.image_slot] : undefined;
           const href = item.link_page_id ? pageHrefById[item.link_page_id] : undefined;
           return (
-            <div key={i} className="border border-slate-200 rounded-lg overflow-hidden">
-              <ImageBox image={image} alt={item.title} className="w-full h-40" />
-              <div className="p-4">
-                <h3 className="font-semibold text-slate-900 mb-1">{item.title}</h3>
-                {item.blurb && <p className="text-slate-700 text-sm mb-2">{item.blurb}</p>}
-                {href ? (
-                  <a href={href} className="text-sm font-medium text-slate-900 underline">
-                    Learn More
-                  </a>
-                ) : (
-                  item.link_page_id && <span className="text-sm text-slate-400">Learn More</span>
-                )}
-              </div>
+            <div key={i}>
+              <ImageBox image={image} alt={item.title} className="w-full h-44 rounded-lg mb-3" />
+              <h3 className="font-semibold text-slate-900 mb-1">{item.title}</h3>
+              {item.blurb && <p className="text-slate-600 text-sm mb-2">{item.blurb}</p>}
+              {href ? (
+                <a
+                  href={href}
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--color-ink)] hover:text-[var(--color-brand-dark)]"
+                >
+                  Learn More <span aria-hidden="true">&rarr;</span>
+                </a>
+              ) : (
+                item.link_page_id && <span className="text-sm text-slate-400">Learn More</span>
+              )}
             </div>
           );
         })}
@@ -322,6 +380,8 @@ function ServicesGrid({
     </section>
   );
 }
+
+const TESTIMONIAL_CARD_COLORS = ["bg-[var(--color-brand-soft)]", "bg-teal-50", "bg-slate-100"];
 
 function Testimonials({
   content,
@@ -332,17 +392,25 @@ function Testimonials({
 }) {
   return (
     <section className={section}>
-      {content.heading && <h2 className="text-2xl font-semibold text-slate-900 mb-6">{content.heading}</h2>}
-      <div className="grid sm:grid-cols-3 gap-6">
+      {content.heading && <Heading center>{content.heading}</Heading>}
+      <div className="grid sm:grid-cols-3 gap-6 pt-6">
         {content.items?.map((item, i) => {
           const image = item.image_slot ? images[item.image_slot] : undefined;
           return (
-            <blockquote key={i} className="border border-slate-200 rounded-lg p-4">
-              <ImageBox image={image} alt={item.name} className="w-12 h-12 rounded-full mb-3" showLabel={false} />
+            <blockquote
+              key={i}
+              className={`relative rounded-xl p-5 pt-9 text-center ${TESTIMONIAL_CARD_COLORS[i % TESTIMONIAL_CARD_COLORS.length]}`}
+            >
+              <ImageBox
+                image={image}
+                alt={item.name}
+                className="w-14 h-14 rounded-full absolute -top-7 left-1/2 -translate-x-1/2 border-4 border-white"
+                showLabel={false}
+              />
               <p className="text-slate-700 italic mb-3">&ldquo;{item.quote}&rdquo;</p>
-              <footer className="text-sm text-slate-500">
+              <footer className="text-sm font-semibold text-slate-900">
                 {item.name}
-                {item.title && `, ${item.title}`}
+                {item.title && <span className="block font-normal text-slate-500">{item.title}</span>}
               </footer>
             </blockquote>
           );
@@ -418,11 +486,11 @@ function CtaButton({ text, href, inverted = false }: { text: string; href: strin
       href={href}
       className={
         inverted
-          ? "inline-block rounded-md bg-white text-slate-900 font-medium px-6 py-3 hover:bg-slate-100"
-          : "inline-block rounded-md bg-slate-900 text-white font-medium px-6 py-3 hover:bg-slate-800"
+          ? "inline-flex items-center gap-2 rounded-md bg-white text-[var(--color-ink)] text-sm font-semibold uppercase tracking-wide px-6 py-3 hover:bg-slate-100"
+          : "inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] text-white text-sm font-semibold uppercase tracking-wide px-6 py-3 hover:bg-black"
       }
     >
-      {text}
+      {text} <span aria-hidden="true">&rarr;</span>
     </a>
   );
 }
