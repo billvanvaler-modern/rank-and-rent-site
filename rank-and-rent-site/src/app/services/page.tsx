@@ -29,7 +29,7 @@ export default async function ServicesHubPage() {
             .filter((page) => page.status === "published")
             .map((page) => (
               <li key={page.id} className="border border-slate-200 rounded-lg p-4">
-                <Link href={`/services/${page.slug}`} className="font-medium text-slate-900 underline">
+                <Link href={`/${page.slug}`} className="font-medium text-slate-900 underline">
                   {page.nav_label ?? page.slug}
                 </Link>
               </li>

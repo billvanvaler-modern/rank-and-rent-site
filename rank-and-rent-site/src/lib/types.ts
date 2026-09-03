@@ -82,6 +82,7 @@ export interface HeroContent {
   intro?: string;
   cta_text?: string;
   cta_url?: string;
+  image_slot?: string;
 }
 
 export interface PageIntroContent {

@@ -44,7 +44,7 @@ export function BlockRenderer({
 }) {
   switch (block.block_type) {
     case "hero":
-      return <Hero content={block.content as unknown as HeroContent} />;
+      return <Hero content={block.content as unknown as HeroContent} images={images} />;
     case "page_intro":
       return <PageIntro content={block.content as unknown as PageIntroContent} />;
     case "services_grid":
@@ -93,14 +93,61 @@ const paragraphs = (text: string) =>
       </p>
     ));
 
-function Hero({ content }: { content: HeroContent }) {
+function Hero({ content, images }: { content: HeroContent; images: Record<string, PageImage> }) {
+  const image = content.image_slot ? images[content.image_slot] : undefined;
   return (
-    <section className={`${section} text-center py-20`}>
-      <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">{content.headline}</h1>
-      {content.subheadline && <p className="text-xl text-slate-600 mb-4">{content.subheadline}</p>}
-      {content.intro && <p className="text-slate-600 max-w-2xl mx-auto mb-8">{content.intro}</p>}
-      {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+    <section className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
+      <div>
+        <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">{content.headline}</h1>
+        {content.subheadline && <p className="text-xl text-slate-600 mb-4">{content.subheadline}</p>}
+        {content.intro && <p className="text-slate-600 max-w-xl mb-8">{content.intro}</p>}
+        {content.cta_text && content.cta_url && <CtaButton text={content.cta_text} href={content.cta_url} />}
+      </div>
+      <ImageBox image={image} alt={content.headline} className="aspect-[4/3] w-full rounded-xl" />
     </section>
+  );
+}
+
+/**
+ * Renders a real photo when one's been uploaded to this slot, or a clearly-
+ * labeled placeholder box when it hasn't -- so an empty image slot reads as
+ * "not filled in yet" rather than looking like something's broken. Real
+ * photos go in via the admin's Image Manager (Supabase Storage); this
+ * component doesn't know or care which slot names are "real" vs. still
+ * empty, it just renders whatever it's given.
+ */
+function ImageBox({
+  image,
+  alt,
+  className = "",
+  showLabel = true,
+}: {
+  image: PageImage | undefined;
+  alt: string;
+  className?: string;
+  showLabel?: boolean;
+}) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={publicImageUrl(image.storage_path)}
+        alt={image.alt_text ?? alt}
+        className={`object-cover bg-slate-100 ${className}`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`flex flex-col items-center justify-center gap-1 bg-slate-100 border border-dashed border-slate-300 text-slate-400 ${className}`}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <path d="M21 15l-5-5L5 21" />
+      </svg>
+      {showLabel && <span className="text-xs">Photo coming soon</span>}
+    </div>
   );
 }
 
@@ -256,10 +303,7 @@ function ServicesGrid({
           const href = item.link_page_id ? pageHrefById[item.link_page_id] : undefined;
           return (
             <div key={i} className="border border-slate-200 rounded-lg overflow-hidden">
-              {image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={publicImageUrl(image.storage_path)} alt={image.alt_text ?? item.title} className="w-full h-40 object-cover" />
-              )}
+              <ImageBox image={image} alt={item.title} className="w-full h-40" />
               <div className="p-4">
                 <h3 className="font-semibold text-slate-900 mb-1">{item.title}</h3>
                 {item.blurb && <p className="text-slate-700 text-sm mb-2">{item.blurb}</p>}
@@ -294,14 +338,7 @@ function Testimonials({
           const image = item.image_slot ? images[item.image_slot] : undefined;
           return (
             <blockquote key={i} className="border border-slate-200 rounded-lg p-4">
-              {image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={publicImageUrl(image.storage_path)}
-                  alt={image.alt_text ?? item.name}
-                  className="w-12 h-12 rounded-full object-cover mb-3"
-                />
-              )}
+              <ImageBox image={image} alt={item.name} className="w-12 h-12 rounded-full mb-3" showLabel={false} />
               <p className="text-slate-700 italic mb-3">&ldquo;{item.quote}&rdquo;</p>
               <footer className="text-sm text-slate-500">
                 {item.name}

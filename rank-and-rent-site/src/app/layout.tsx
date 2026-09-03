@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { getCurrentSite, getHubPage, getSingletonPage } from "@/lib/data";
+import { getChildPages, getCurrentSite, getHubPage, getSingletonPage } from "@/lib/data";
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getCurrentSite();
@@ -32,25 +32,55 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     getSingletonPage(site.id, "contact"),
   ]);
 
+  // Only fetched for the nav dropdown, so a site with a services hub but no
+  // published services yet still shows the Services link, just without a
+  // dropdown under it (see NavDropdown below).
+  const servicePages =
+    servicesHub && servicesHub.status === "published"
+      ? (await getChildPages(servicesHub.id)).filter((p) => p.status === "published")
+      : [];
+  const locationPages =
+    locationsHub && locationsHub.status === "published"
+      ? (await getChildPages(locationsHub.id)).filter((p) => p.status === "published")
+      : [];
+
   return (
     <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col font-sans bg-white text-slate-900">
-        <header className="border-b border-slate-200">
-          <nav className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/" className="font-semibold">
+        <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+          <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
+            <Link href="/" className="text-lg font-bold text-slate-900 tracking-tight shrink-0">
               {site.business_name}
             </Link>
-            <div className="flex gap-6 text-sm">
+
+            <div className="hidden sm:flex items-center gap-1 text-sm font-medium text-slate-600">
               {servicesHub && servicesHub.status === "published" && (
-                <Link href="/services">Services</Link>
+                <NavDropdown label="Services" href="/services" items={servicePages} />
               )}
               {locationsHub && locationsHub.status === "published" && (
-                <Link href="/locations">Locations</Link>
+                <NavDropdown label="Locations" href="/locations" items={locationPages} />
               )}
-              {aboutPage && aboutPage.status === "published" && <Link href="/about">About</Link>}
+              {aboutPage && aboutPage.status === "published" && <NavLink href="/about">About</NavLink>}
               {contactPage && contactPage.status === "published" && (
-                <Link href="/contact">Contact</Link>
+                <NavLink href="/contact">Contact</NavLink>
               )}
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              {site.phone && (
+                <a
+                  href={`tel:${site.phone.replace(/[^\d+]/g, "")}`}
+                  className="hidden md:block text-sm font-semibold text-slate-900 hover:text-slate-600"
+                >
+                  {site.phone}
+                </a>
+              )}
+              <Link
+                href="/contact"
+                className="inline-block rounded-md bg-slate-900 text-white text-sm font-medium px-4 py-2 hover:bg-slate-800 whitespace-nowrap"
+              >
+                Get a Free Estimate
+              </Link>
             </div>
           </nav>
         </header>
@@ -58,7 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="flex-1">{children}</main>
 
         <footer className="border-t border-slate-200 mt-12">
-          <div className="max-w-4xl mx-auto px-6 py-8 text-sm text-slate-500 flex flex-col sm:flex-row sm:justify-between gap-2">
+          <div className="max-w-5xl mx-auto px-6 py-8 text-sm text-slate-500 flex flex-col sm:flex-row sm:justify-between gap-2">
             <p>
               {site.business_name}
               {site.city && site.state ? ` — ${site.city}, ${site.state}` : ""}
@@ -68,5 +98,53 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </footer>
       </body>
     </html>
+  );
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="px-3 py-2 rounded-md hover:text-slate-900 hover:bg-slate-100">
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * CSS-only hover dropdown (no client component / JS needed) -- matches
+ * PROJECT.md's "Services (dropdown -> all service pages)" nav spec. Falls
+ * back to a plain link when there's nothing to list yet (e.g. a hub with
+ * no published children), so it never shows an empty dropdown.
+ */
+function NavDropdown({
+  label,
+  href,
+  items,
+}: {
+  label: string;
+  href: string;
+  items: { id: string; slug: string; nav_label: string | null }[];
+}) {
+  if (items.length === 0) {
+    return <NavLink href={href}>{label}</NavLink>;
+  }
+  return (
+    <div className="relative group">
+      <Link href={href} className="px-3 py-2 rounded-md hover:text-slate-900 hover:bg-slate-100 inline-block">
+        {label}
+      </Link>
+      <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full pt-1 min-w-[200px]">
+        <div className="bg-white border border-slate-200 rounded-lg shadow-lg py-2">
+          {items.map((item) => (
+            <Link
+              key={item.id}
+              href={`/${item.slug}`}
+              className="block px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+            >
+              {item.nav_label ?? item.slug}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

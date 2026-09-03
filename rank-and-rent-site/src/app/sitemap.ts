@@ -23,11 +23,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getSingletonPage(site.id, "contact"),
   ]);
 
+  // Hub pages keep their own path (/services, /locations) as nav/index
+  // pages, but individual service and location pages resolve at the root
+  // now -- matching the reference site's flat, keyword+city URL pattern.
   if (servicesHub?.status === "published") {
     entries.push({ url: `${base}/services` });
     const services = await getChildPages(servicesHub.id);
     for (const s of services) {
-      if (s.status === "published") entries.push({ url: `${base}/services/${s.slug}` });
+      if (s.status === "published") entries.push({ url: `${base}/${s.slug}` });
     }
   }
 
@@ -35,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({ url: `${base}/locations` });
     const locations = await getChildPages(locationsHub.id);
     for (const l of locations) {
-      if (l.status === "published") entries.push({ url: `${base}/locations/${l.slug}` });
+      if (l.status === "published") entries.push({ url: `${base}/${l.slug}` });
     }
   }
 
